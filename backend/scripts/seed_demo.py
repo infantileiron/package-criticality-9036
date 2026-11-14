@@ -24,6 +24,15 @@ def seed():
    db.add(DurationScenario(id='demo-scenario',name='通道加固·32小时交付风险基线',package_id='demo-package',version=1,deadline=32.,samples=1500,seed=2410,snapshot=snapshot,created_at=now()))
   db.flush()
   if not db.get(ScheduleRun,'demo-run'):db.add(ScheduleRun(id='demo-run',scenario_id='demo-scenario',status='completed',result=analyze(db.get(DurationScenario,'demo-scenario').snapshot,db.get(DurationScenario,'demo-scenario')),error='',created_at=now()));db.flush()
+  if not db.get(DurationScenario,'demo-scenario-crews'):
+   b_crew={'T03','T06','T07','T08','T14','T15','T17','T19'};heavy={'T10','T11','T18'};mid={'T10','T11','T12','T13','T14','T16'}
+   prio={'T21':10,'T19':20,'T20':20,'T15':30,'T17':30,'T18':30,'T24':90}
+   crews=[{'crew_id':'CR-A','capacity':4},{'crew_id':'CR-B','capacity':2}]
+   dispatch=[{'task_id':t['task_id'],'priority':prio.get(t['task_id'],40 if t['task_id'] in mid else 50),'crews':{'CR-A':1,'CR-B':1} if t['task_id']=='T21' else {'CR-A':2} if t['task_id'] in heavy else {'CR-B':1} if t['task_id'] in b_crew else {'CR-A':1}} for t in tasks]
+   snapshot={'package':serialize(db.get(WorkPackage,'demo-package')),'dependencies':[serialize(e) for e in db.scalars(select(TaskDependency).where(TaskDependency.package_id=='demo-package').order_by(TaskDependency.predecessor,TaskDependency.successor))],'crews':crews,'dispatch':dispatch}
+   db.add(DurationScenario(id='demo-scenario-crews',name='通道加固·双班组受限32小时交付风险',package_id='demo-package',version=2,deadline=32.,samples=1500,seed=2410,snapshot=snapshot,created_at=now()))
+  db.flush()
+  if not db.get(ScheduleRun,'demo-run-crews'):db.add(ScheduleRun(id='demo-run-crews',scenario_id='demo-scenario-crews',status='completed',result=analyze(db.get(DurationScenario,'demo-scenario-crews').snapshot,db.get(DurationScenario,'demo-scenario-crews')),error='',created_at=now()));db.flush()
   if not db.get(DeliveryReview,'demo-review'):db.add(DeliveryReview(id='demo-review',run_id='demo-run',version=1,note='已核对FS依赖与基线时差，模拟每次重算关键度；独立工期未涵盖共享资源、天气共因，32小时达标比例不是交付保证。',decision='accepted',author='analyst@duochuan.demo',created_at=now()));db.flush()
   if not db.get(Report,'demo-report'):db.add(Report(id='demo-report',run_id='demo-run',review_id='demo-review',title='铎川通道加固·基线与风险复核',published_by='admin@duochuan.demo',created_at=now()))
   db.commit();return {m.__tablename__:db.scalar(select(func.count()).select_from(m)) for m in (User,WorkPackage,TaskDependency,DurationScenario,ScheduleRun,DeliveryReview,Report)}

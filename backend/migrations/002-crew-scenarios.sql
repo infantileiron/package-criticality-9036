@@ -1,0 +1,3 @@
+-- Crew capacity and per-task dispatch live inside duration_scenarios.snapshot JSON (crews/dispatch keys).
+-- No DDL: metadata.create_all is unchanged; snapshots without these keys behave as unconstrained,
+-- so existing scenarios, runs, reviews and approved reports keep their original semantics.
